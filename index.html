@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lootara Pokémon Shop</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+</head>
+<body class="bg-gray-100 text-gray-900">
+  <div class="container mx-auto p-6">
+    <h1 class="text-4xl font-bold mb-6">Lootara Pokémon Card Shop</h1>
+    <div id="cards" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+      <!-- Cards will be rendered here -->
+    </div>
+  </div>
+
+  <script>
+    // TODO: Replace with your Firebase project config
+    const firebaseConfig = {
+  apiKey: "AIzaSyCRxeeIUMQUQ1H8RIKk5lXh77IQAGHhMe4",
+  authDomain: "lootara-website.firebaseapp.com",
+  projectId: "lootara-website",
+  storageBucket: "lootara-website.firebasestorage.app",
+  messagingSenderId: "984923606768",
+  appId: "1:984923606768:web:7d816b4c4dea60c6b7fc35",
+  measurementId: "G-46CY0YCTW1"
+};
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const cardsContainer = document.getElementById("cards");
+
+    async function renderCards() {
+      const snapshot = await db.collection("cards").get();
+      snapshot.forEach(doc => {
+        const card = doc.data();
+        const cardElement = document.createElement("div");
+        cardElement.className = "bg-white p-4 rounded shadow";
+        cardElement.innerHTML = `
+          <img src="${card.image}" alt="${card.name}" class="w-full h-48 object-cover rounded mb-4">
+          <h2 class="text-xl font-semibold">${card.name}</h2>
+          <p class="mb-2">$${card.price}</p>
+          <a href="${card.stripeLink}" target="_blank" class="inline-block bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Buy Now</a>
+        `;
+        cardsContainer.appendChild(cardElement);
+      });
+    }
+
+    renderCards();
+  </script>
+</body>
+</html>
