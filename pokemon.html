@@ -53,23 +53,7 @@
     </style>
   </head>
   <body class="bg-gray-100 text-gray-900">
-    <!-- Header with full-height logo and dark background -->
-    <header class="sticky top-0 z-10 h-20" style="background-color: #111111">
-      <div class="container mx-auto flex items-center h-full px-4">
-        <a href="index.html" class="flex items-center h-full mr-8">
-          <img
-            src="./images/logo.png"
-            alt="Lootara Logo"
-            class="h-full w-auto object-cover"
-          />
-        </a>
-        <nav class="flex space-x-6">
-          <a href="#" class="text-white hover:text-blue-400">Pokemon</a>
-          <a href="#" class="text-white hover:text-blue-400">Bearbricks</a>
-          <a href="#" class="text-white hover:text-blue-400">Contacts</a>
-        </nav>
-      </div>
-    </header>
+    <div id="header-placeholder"></div>
 
     <div class="container mx-auto p-6">
       <div class="mb-4 flex flex-wrap gap-4 items-center">
@@ -111,6 +95,13 @@
     </div>
 
     <script>
+      // Load header
+      fetch("header.html")
+        .then((res) => res.text())
+        .then((html) => {
+          document.getElementById("header-placeholder").innerHTML = html;
+        });
+
       const cardsContainer = document.getElementById("cards");
       const searchBar = document.getElementById("searchBar");
       const clearSearch = document.getElementById("clearSearch");
