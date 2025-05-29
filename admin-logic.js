@@ -37,7 +37,7 @@ pokemonForm.addEventListener("submit", async (e) => {
   try {
     if (files.length > 0) {
       for (const file of files) {
-        const storageRef = storage.ref(`cards/${Date.now()}-${file.name}`);
+        const storageRef = storage.ref(`pokemon/${Date.now()}-${file.name}`);
         await storageRef.put(file);
         const url = await storageRef.getDownloadURL();
         imageUrls.push(url);
@@ -61,10 +61,10 @@ pokemonForm.addEventListener("submit", async (e) => {
     }
 
     if (docId) {
-      await db.collection("cards").doc(docId).update(cardData);
+      await db.collection("pokemon").doc(docId).update(cardData);
       pokemonStatus.textContent = "Card updated successfully!";
     } else {
-      await db.collection("cards").add(cardData);
+      await db.collection("pokemon").add(cardData);
       pokemonStatus.textContent = "Card added successfully!";
     }
 
@@ -111,7 +111,7 @@ function renderCard(doc) {
 }
 
 async function loadCards() {
-  const snapshot = await db.collection("cards").get();
+  const snapshot = await db.collection("pokemon").get();
   pokemonList.innerHTML = "";
   const query = searchInput.value.toLowerCase();
   const statusFilter = filterStatus.value;
@@ -128,7 +128,7 @@ async function loadCards() {
 }
 
 async function editCard(id) {
-  const doc = await db.collection("cards").doc(id).get();
+  const doc = await db.collection("pokemon").doc(id).get();
   if (doc.exists) {
     const card = doc.data();
     pokemonForm.pokemonDocId.value = id;
@@ -146,7 +146,7 @@ async function editCard(id) {
 
 async function deleteCard(id) {
   if (confirm("Are you sure you want to delete this card?")) {
-    await db.collection("cards").doc(id).delete();
+    await db.collection("pokemon").doc(id).delete();
     loadCards();
   }
 }
