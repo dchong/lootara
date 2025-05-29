@@ -50,24 +50,34 @@
   </style>
 </head>
 <body class="bg-gray-100 text-gray-900">
-  <div class="sticky top-0 bg-gray-100 z-10 shadow-sm">
-    <div class="container mx-auto p-6">
-      <h1 class="text-4xl font-bold mb-4">Lootara</h1>
-      <div class="mb-4 flex flex-wrap gap-4 items-center">
-        <input id="searchBar" type="text" placeholder="Search cards by name or set..." class="flex-1 p-3 border rounded shadow-sm" />
-        <button id="clearSearch" class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400 transition">Clear</button>
-      </div>
+  <!-- Header with full-height logo and dark background -->
+  <header class="sticky top-0 z-10 h-20" style="background-color: #111111;">
+    <div class="container mx-auto flex items-center justify-between h-full px-4">
+      <a href="index.html" class="flex items-center h-full">
+        <img src="./images/logo.png" alt="Lootara Logo" class="h-full w-auto object-cover" />
+      </a>
+      <nav class="hidden md:flex space-x-6">
+        <!-- Future links -->
+        <!-- <a href="/admin.html" class="text-white hover:text-blue-400">Admin</a> -->
+      </nav>
     </div>
-  </div>
+  </header>
+
+  <!-- Add spacing between banner and search bar -->
+  <div class="h-6"></div>
 
   <div class="container mx-auto p-6">
+    <div class="mb-4 flex flex-wrap gap-4 items-center">
+      <input id="searchBar" type="text" placeholder="Search cards by name or set..." class="flex-1 p-3 border rounded shadow-sm" />
+      <button id="clearSearch" class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400 transition">Clear</button>
+    </div>
     <div id="cards" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"></div>
   </div>
 
   <!-- Modal -->
   <div id="imageModal" class="hidden fixed inset-0 z-50 bg-black bg-opacity-75 flex flex-col items-center justify-center">
-    <button id="prevImage" class="modal-nav-button" style="left: 1rem;">&#8592;</button>
-    <button id="nextImage" class="modal-nav-button" style="right: 1rem;">&#8594;</button>
+    <button id="prevImage" class="modal-nav-button">&#8592;</button>
+    <button id="nextImage" class="modal-nav-button">&#8594;</button>
     <img id="modalImg" src="" class="rounded shadow-lg mb-4 z-20" />
     <span id="imageCounter" class="text-white text-lg font-semibold z-20 mb-2"></span>
     <div id="thumbnailStrip" class="flex gap-2 overflow-x-auto px-4 pb-4 z-20"></div>
