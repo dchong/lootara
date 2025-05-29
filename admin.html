@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin - Lootara Pokémon Shop</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+</head>
+<body class="bg-gray-100 text-gray-900">
+  <div class="container mx-auto p-6">
+    <h1 class="text-3xl font-bold mb-6">Admin Panel</h1>
+
+    <!-- Layout Wrapper -->
+    <div class="flex flex-wrap gap-6">
+      <!-- Add Card Form -->
+      <form id="cardForm" class="bg-white p-6 rounded shadow-md max-w-md w-full md:w-1/3">
+        <input type="hidden" id="docId" />
+        <div class="mb-4">
+          <label class="block mb-1">Name</label>
+          <input id="name" class="w-full border p-2" type="text" required />
+        </div>
+        <div class="mb-4">
+          <label class="block mb-1">Set</label>
+          <input id="set" class="w-full border p-2" type="text" />
+        </div>
+        <div class="mb-4">
+          <label class="block mb-1">Condition</label>
+          <input id="condition" class="w-full border p-2" type="text" placeholder="e.g., NM" />
+        </div>
+        <div class="mb-4">
+          <label class="block mb-1">Price</label>
+          <input id="price" class="w-full border p-2" type="number" step="0.01" required />
+        </div>
+        <div class="mb-4">
+          <label class="block mb-1">Purchase Price</label>
+          <input id="purchasePrice" class="w-full border p-2" type="number" step="0.01" />
+        </div>
+        <div class="mb-4">
+          <label class="block mb-1">Purchased From</label>
+          <input id="purchasedFrom" class="w-full border p-2" type="text" />
+        </div>
+        <div class="mb-4">
+          <label class="block mb-1">Status</label>
+          <select id="statusField" class="w-full border p-2">
+            <option value="">Select Status</option>
+            <option value="Inventory">Inventory</option>
+            <option value="Listed">Listed</option>
+            <option value="Pending Sale">Pending Sale</option>
+            <option value="Sold">Sold</option>
+            <option value="Archived">Archived</option>
+          </select>
+        </div>
+        <div class="mb-4">
+          <label class="block mb-1">Image URL</label>
+          <input id="image" class="w-full border p-2" type="url" required />
+        </div>
+        <div class="mb-4">
+          <label class="block mb-1">Stripe Checkout Link</label>
+          <input id="stripeLink" class="w-full border p-2" type="url" required />
+        </div>
+        <button class="bg-blue-600 text-white px-4 py-2 rounded" type="submit">Save Card</button>
+      </form>
+
+      <!-- Cards Section -->
+      <div class="flex-1 min-w-0">
+        <!-- Filter and Sort -->
+        <div class="flex items-center space-x-4 mb-4">
+          <select id="filterStatus" class="border p-2" multiple size="5">
+            <option value="Inventory">Inventory</option>
+            <option value="Listed">Listed</option>
+            <option value="Pending Sale">Pending Sale</option>
+            <option value="Sold">Sold</option>
+            <option value="Archived">Archived</option>
+          </select>
+          <select id="sortBy" class="border p-2">
+            <option value="name">Sort by Name</option>
+            <option value="price">Sort by Price</option>
+            <option value="profit">Sort by Profit</option>
+          </select>
+        </div>
+
+        <h2 class="text-2xl font-semibold mb-4">Current Cards</h2>
+        <div id="cardList" class="space-y-4"></div>
+
+        <p id="status" class="mt-4 text-sm text-green-600"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Script content remains unchanged -->
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCRxeeIUMQUQ1H8RIKk5lXh77IQAGHhMe4",
+    authDomain: "lootara-website.firebaseapp.com",
+    projectId: "lootara-website",
+    storageBucket: "lootara-website.firebasestorage.app",
+    messagingSenderId: "984923606768",
+    appId: "1:984923606768:web:7d816b4c4dea60c6b7fc35",
+    measurementId: "G-46CY0YCTW1"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  const form = document.getElementById("cardForm");
+  const status = document.getElementById("status");
+  const cardList = document.getElementById("cardList");
+  const sortBy = document.getElementById("sortBy");
+  const filterStatus = document.getElementById("filterStatus");
+
+  let cards = [];
+
+  function getStatusColor(status) {
+    switch (status) {
+      case 'Inventory': return '#6B7280';
+      case 'Listed': return '#2563EB';
+      case 'Pending Sale': return '#D97706';
+      case 'Sold': return '#16A34A';
+      case 'Archived': return '#9CA3AF';
+      default: return '#6B7280';
+    }
+  }
+
+  async function loadCards() {
+    const snapshot = await db.collection("cards").get();
+    cards = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    renderCards();
+  }
+
+  function renderCards() {
+    const selectedStatuses = Array.from(filterStatus.selectedOptions).map(opt => opt.value);
+    let filteredCards = cards.filter(card => selectedStatuses.length === 0 || selectedStatuses.includes(card.status));
+
+    const sort = sortBy.value;
+    if (sort === "price") {
+      filteredCards.sort((a, b) => (a.price || 0) - (b.price || 0));
+    } else if (sort === "profit") {
+      filteredCards.sort((a, b) => ((b.price || 0) - (b.purchasePrice || 0)) - ((a.price || 0) - (a.purchasePrice || 0)));
+    } else {
+      filteredCards.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    }
+
+    cardList.innerHTML = "";
+    filteredCards.forEach(card => {
+      const profit = (card.price || 0) - (card.purchasePrice || 0);
+      const div = document.createElement("div");
+      div.className = "bg-white p-4 rounded shadow flex justify-between items-center";
+      div.innerHTML = `
+        <div>
+          <h3 class="font-semibold">${card.name}</h3>
+          <p class="text-sm text-gray-600">Set: ${card.set || ''} | Condition: ${card.condition || ''}</p>
+          <p class="text-sm">Price: $${card.price} | Purchase: $${card.purchasePrice || 0} | Profit: $${profit.toFixed(2)} | Status: ${card.status ? `<span class=\"inline-block px-2 py-1 rounded text-white text-xs\" style=\"background-color: ${getStatusColor(card.status)}\">${card.status}</span>` : ''}</p>
+        </div>
+        <div class="space-x-2">
+          <button class="bg-yellow-500 text-white px-3 py-1 rounded" onclick="editCard('${card.id}')">Edit</button>
+          <button class="bg-red-600 text-white px-3 py-1 rounded" onclick="deleteCard('${card.id}')">Delete</button>
+        </div>
+      `;
+      cardList.appendChild(div);
+    });
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const docId = form.docId.value;
+    const cardData = {
+      name: form.name.value,
+      set: form.set.value,
+      condition: form.condition.value,
+      price: parseFloat(form.price.value),
+      purchasePrice: parseFloat(form.purchasePrice.value) || null,
+      purchasedFrom: form.purchasedFrom.value,
+      status: form.statusField.value,
+      image: form.image.value,
+      stripeLink: form.stripeLink.value,
+    };
+
+    try {
+      if (docId) {
+        await db.collection("cards").doc(docId).update(cardData);
+        status.textContent = "Card updated successfully!";
+      } else {
+        await db.collection("cards").add(cardData);
+        status.textContent = "Card added successfully!";
+      }
+      form.reset();
+      form.docId.value = "";
+      loadCards();
+    } catch (error) {
+      status.textContent = "Error: " + error.message;
+      status.classList.add("text-red-600");
+    }
+  });
+
+  async function editCard(id) {
+    const doc = await db.collection("cards").doc(id).get();
+    if (doc.exists) {
+      const card = doc.data();
+      form.docId.value = id;
+      form.name.value = card.name;
+      form.set.value = card.set;
+      form.condition.value = card.condition;
+      form.price.value = card.price;
+      form.purchasePrice.value = card.purchasePrice || "";
+      form.purchasedFrom.value = card.purchasedFrom || "";
+      form.statusField.value = card.status || "";
+      form.image.value = card.image;
+      form.stripeLink.value = card.stripeLink;
+    }
+  }
+
+  async function deleteCard(id) {
+    if (confirm("Are you sure you want to delete this card?")) {
+      await db.collection("cards").doc(id).delete();
+      loadCards();
+    }
+  }
+
+  sortBy.addEventListener("change", renderCards);
+  filterStatus.addEventListener("change", renderCards);
+
+  loadCards();
+</script>
+</body>
+</html>

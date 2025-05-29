@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lootara Insights</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+</head>
+<body class="bg-gray-100 text-gray-900">
+  <div class="container mx-auto p-6">
+    <h1 class="text-3xl font-bold mb-6">Performance Insights</h1>
+    <canvas id="profitChart" class="w-full h-64 mb-10"></canvas>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCRxeeIUMQUQ1H8RIKk5lXh77IQAGHhMe4",
+      authDomain: "lootara-website.firebaseapp.com",
+      projectId: "lootara-website",
+      storageBucket: "lootara-website.firebasestorage.app",
+      messagingSenderId: "984923606768",
+      appId: "1:984923606768:web:7d816b4c4dea60c6b7fc35",
+      measurementId: "G-46CY0YCTW1"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    async function loadChartData() {
+      const snapshot = await db.collection("cards").get();
+      const cards = snapshot.docs.map(doc => doc.data());
+
+      const labels = cards.map(card => card.name);
+      const profits = cards.map(card => (card.price || 0) - (card.purchasePrice || 0));
+
+      const ctx = document.getElementById('profitChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Profit ($)',
+            data: profits,
+            backgroundColor: 'rgba(59, 130, 246, 0.5)',
+            borderColor: 'rgba(59, 130, 246, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    }
+
+    loadChartData();
+  </script>
+</body>
+</html>
