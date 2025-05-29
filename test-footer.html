@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Footer Test</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="bg-gray-100">
+    <h1 class="text-center my-6 text-2xl font-bold">Test Footer Below</h1>
+    <div id="footer-placeholder"></div>
+
+    <script>
+      fetch("footer.html")
+        .then((res) => res.text())
+        .then((html) => {
+          document.getElementById("footer-placeholder").innerHTML = html;
+          console.log("✅ Footer loaded");
+        })
+        .catch((err) => console.error("❌ Footer failed to load", err));
+    </script>
+  </body>
+</html>

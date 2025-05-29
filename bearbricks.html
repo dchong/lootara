@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shop | Lootara</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <style>
+      .hover-zoom {
+        transition: transform 0.3s ease;
+      }
+      .hover-zoom:hover {
+        transform: scale(1.05);
+      }
+      .fade-in {
+        opacity: 0;
+        animation: fadeIn 0.5s forwards;
+      }
+      @keyframes fadeIn {
+        to {
+          opacity: 1;
+        }
+      }
+      #modalImg {
+        max-height: 70vh;
+        max-width: 90vw;
+      }
+      .modal-nav-button {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: white;
+        background-color: rgba(0, 0, 0, 0.3);
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        cursor: pointer;
+        z-index: 10;
+      }
+      #prevImage {
+        left: 1rem;
+      }
+      #nextImage {
+        right: 1rem;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 text-gray-900">
+    <div id="header-placeholder"></div>
+
+    <div class="container mx-auto p-6">
+      <div class="mb-4 flex flex-wrap gap-4 items-center">
+        <input
+          id="searchBar"
+          type="text"
+          placeholder="Search series, name or description..."
+          class="flex-1 p-3 border rounded shadow-sm"
+        />
+        <button
+          id="clearSearch"
+          class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400 transition"
+        >
+          Clear
+        </button>
+      </div>
+      <div
+        id="bears"
+        class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"
+      ></div>
+    </div>
+
+    <div id="footer-placeholder"></div>
+
+    <!-- Modal -->
+    <div
+      id="imageModal"
+      class="hidden fixed inset-0 z-50 bg-black bg-opacity-75 flex flex-col items-center justify-center"
+    >
+      <button id="prevImage" class="modal-nav-button">&#8592;</button>
+      <button id="nextImage" class="modal-nav-button">&#8594;</button>
+      <img id="modalImg" src="" class="rounded shadow-lg mb-4 z-20" />
+      <span
+        id="imageCounter"
+        class="text-white text-lg font-semibold z-20 mb-2"
+      ></span>
+      <div
+        id="thumbnailStrip"
+        class="flex gap-2 overflow-x-auto px-4 pb-4 z-20"
+      ></div>
+    </div>
+
+    <script>
+      // Load header
+      fetch("header.html")
+        .then((res) => res.text())
+        .then((html) => {
+          document.getElementById("header-placeholder").innerHTML = html;
+        });
+
+      fetch("footer.html")
+        .then((res) => res.text())
+        .then((html) => {
+          document.getElementById("footer-placeholder").innerHTML = html;
+          document.getElementById("year").textContent =
+            new Date().getFullYear();
+        })
+        .catch((err) => console.error("Failed to load footer:", err));
+
+      const bearContainer = document.getElementById("bears");
+      const searchBar = document.getElementById("searchBar");
+      const clearSearch = document.getElementById("clearSearch");
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyCRxeeIUMQUQ1H8RIKk5lXh77IQAGHhMe4",
+        authDomain: "lootara-website.firebaseapp.com",
+        projectId: "lootara-website",
+        storageBucket: "lootara-website.firebasestorage.app",
+        messagingSenderId: "984923606768",
+        appId: "1:984923606768:web:7d816b4c4dea60c6b7fc35",
+        measurementId: "G-46CY0YCTW1",
+      };
+
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.firestore();
+      let bearbricks = [];
+
+      function showModal(images, startIndex) {
+        const modal = document.getElementById("imageModal");
+        const modalImg = document.getElementById("modalImg");
+        const imageCounter = document.getElementById("imageCounter");
+        const thumbnailStrip = document.getElementById("thumbnailStrip");
+
+        let currentIdx = startIndex;
+        modal.classList.remove("hidden");
+        updateModal();
+
+        function updateModal() {
+          modalImg.src = images[currentIdx];
+          imageCounter.textContent = `${currentIdx + 1} of ${images.length}`;
+          thumbnailStrip.innerHTML = images
+            .map(
+              (img, i) =>
+                `<img src="${img}" class="h-16 w-16 rounded cursor-pointer border-2 ${
+                  i === currentIdx ? "border-blue-500" : "border-transparent"
+                }" data-thumb-index="${i}">`
+            )
+            .join("");
+          thumbnailStrip.querySelectorAll("img").forEach((thumb) => {
+            thumb.addEventListener("click", (e) => {
+              e.stopPropagation();
+              currentIdx = parseInt(thumb.dataset.thumbIndex);
+              updateModal();
+            });
+          });
+        }
+
+        document.getElementById("prevImage").onclick = (e) => {
+          e.stopPropagation();
+          currentIdx = (currentIdx - 1 + images.length) % images.length;
+          updateModal();
+        };
+        document.getElementById("nextImage").onclick = (e) => {
+          e.stopPropagation();
+          currentIdx = (currentIdx + 1) % images.length;
+          updateModal();
+        };
+
+        modal.onclick = (e) => {
+          if (e.target === modal) modal.classList.add("hidden");
+        };
+      }
+
+      function renderBears(bearsToRender) {
+        bearContainer.innerHTML = "";
+        bearsToRender.forEach((bear) => {
+          const images = bear.images || [bear.image];
+          const bearEl = document.createElement("div");
+          bearEl.className = "bg-white p-4 rounded fade-in";
+          bearEl.innerHTML = `
+          <div class="flex flex-col items-center">
+            <div class="relative rounded overflow-hidden">
+              <img src="${
+                images[0]
+              }" class="h-60 w-full object-contain mb-2 cursor-pointer main-image hover-zoom shadow-xl" data-images='${JSON.stringify(
+            images
+          )}' data-index="0">
+              <div class="absolute top-1/2 left-0 transform -translate-y-1/2 text-white text-xl bg-gray-800 bg-opacity-50 px-2 py-1 cursor-pointer prev-btn">&#8592;</div>
+              <div class="absolute top-1/2 right-0 transform -translate-y-1/2 text-white text-xl bg-gray-800 bg-opacity-50 px-2 py-1 cursor-pointer next-btn">&#8594;</div>
+            </div>
+            <div class="flex gap-1 mt-1">
+              ${images
+                .map(
+                  (img, i) =>
+                    `<img src="${img}" class="h-12 w-12 object-cover rounded cursor-pointer thumb" data-index="${i}" data-images='${JSON.stringify(
+                      images
+                    )}'>`
+                )
+                .join("")}
+            </div>
+            <h2 class="text-lg font-bold mt-2">${bear.name}</h2>
+            <p class="text-sm text-gray-600 italic">${bear.set || ""} · ${
+            bear.condition || ""
+          }</p>
+            <div class="flex justify-between items-center mt-2 w-full">
+              <span class="text-xl font-semibold text-green-600">$${
+                bear.price
+              }</span>
+              <a href="${
+                bear.stripeLink
+              }" target="_blank" class="bg-blue-600 text-white text-sm px-4 py-2 rounded hover:bg-blue-700 transition">Buy Now</a>
+            </div>
+          </div>
+        `;
+          bearContainer.appendChild(bearEl);
+
+          let currentIdx = 0;
+          const mainImg = bearEl.querySelector(".main-image");
+          const thumbnails = bearEl.querySelectorAll(".thumb");
+          const prevBtn = bearEl.querySelector(".prev-btn");
+          const nextBtn = bearEl.querySelector(".next-btn");
+
+          function updateMainImage(index) {
+            currentIdx = index;
+            mainImg.src = images[currentIdx];
+          }
+
+          mainImg.addEventListener("click", () =>
+            showModal(images, currentIdx)
+          );
+          thumbnails.forEach((thumb) => {
+            thumb.addEventListener("click", () =>
+              updateMainImage(parseInt(thumb.dataset.index))
+            );
+          });
+          prevBtn.addEventListener("click", () =>
+            updateMainImage((currentIdx - 1 + images.length) % images.length)
+          );
+          nextBtn.addEventListener("click", () =>
+            updateMainImage((currentIdx + 1) % images.length)
+          );
+        });
+      }
+
+      function fetchBears() {
+        db.collection("bearbricks")
+          .get()
+          .then((snapshot) => {
+            bearbricks = snapshot.docs.map((doc) => doc.data());
+            renderBears(bearbricks);
+          });
+      }
+
+      searchBar.addEventListener("input", () => {
+        const query = searchBar.value.toLowerCase();
+        const filtered = bearbricks.filter(
+          (card) =>
+            card.name.toLowerCase().includes(query) ||
+            (card.set && card.set.toLowerCase().includes(query))
+        );
+        renderBears(filtered);
+      });
+
+      clearSearch.addEventListener("click", () => {
+        searchBar.value = "";
+        renderBears(bearbricks);
+      });
+
+      fetchBears();
+    </script>
+  </body>
+</html>

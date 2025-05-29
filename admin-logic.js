@@ -1,12 +1,21 @@
 // admin-logic.js
 
-// Load the shared header
+// Load shared header and footer
 fetch("header.html")
   .then((res) => res.text())
   .then((html) => {
     document.getElementById("header-placeholder").innerHTML = html;
   });
+fetch("footer.html")
+  .then((res) => res.text())
+  .then((html) => {
+    document.getElementById("footer-placeholder").innerHTML = html;
+    const yearEl = document.getElementById("year");
+    if (yearEl) yearEl.textContent = new Date().getFullYear();
+  })
+  .catch((err) => console.error("Failed to load footer:", err));
 
+// Firebase setup
 const firebaseConfig = {
   apiKey: "AIzaSyCRxeeIUMQUQ1H8RIKk5lXh77IQAGHhMe4",
   authDomain: "lootara-website.firebaseapp.com",
@@ -16,83 +25,48 @@ const firebaseConfig = {
   appId: "1:984923606768:web:7d816b4c4dea60c6b7fc35",
   measurementId: "G-46CY0YCTW1",
 };
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const storage = firebase.storage();
 
+// Element references
 const pokemonForm = document.getElementById("pokemonForm");
+const bearbrickForm = document.getElementById("bearbrickForm");
 const pokemonList = document.getElementById("pokemonList");
+const bearbrickList = document.getElementById("bearbrickList");
 const pokemonStatus = document.getElementById("pokemonStatus");
+const bearbrickStatus = document.getElementById("bearbrickStatus");
 const searchInput = document.getElementById("searchInput");
 const filterStatus = document.getElementById("filterStatus");
 
-pokemonForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-
-  const docId = pokemonForm.pokemonDocId.value;
-  const files = document.getElementById("pokemonImageUpload").files;
-  const imageUrls = [];
-
-  try {
-    if (files.length > 0) {
-      for (const file of files) {
-        const storageRef = storage.ref(`pokemon/${Date.now()}-${file.name}`);
-        await storageRef.put(file);
-        const url = await storageRef.getDownloadURL();
-        imageUrls.push(url);
-      }
-    }
-
-    const cardData = {
-      name: pokemonForm.pokemonName.value,
-      set: pokemonForm.pokemonSet.value,
-      condition: pokemonForm.pokemonCondition.value,
-      price: parseFloat(pokemonForm.pokemonPrice.value),
-      purchasePrice: parseFloat(pokemonForm.pokemonPurchasePrice.value) || null,
-      purchasedFrom: pokemonForm.pokemonPurchasedFrom.value,
-      status: pokemonForm.pokemonStatusField.value,
-      stripeLink: pokemonForm.pokemonStripeLink.value || "",
-      notes: pokemonForm.pokemonNotes.value || "",
-    };
-
-    if (imageUrls.length > 0) {
-      cardData.images = imageUrls;
-    }
-
-    if (docId) {
-      await db.collection("pokemon").doc(docId).update(cardData);
-      pokemonStatus.textContent = "Card updated successfully!";
-    } else {
-      await db.collection("pokemon").add(cardData);
-      pokemonStatus.textContent = "Card added successfully!";
-    }
-
-    pokemonForm.reset();
-    pokemonForm.pokemonDocId.value = "";
-    loadCards();
-  } catch (err) {
-    pokemonStatus.textContent = "Error: " + err.message;
-    pokemonStatus.classList.add("text-red-600");
+// Upload images
+async function uploadImages(files, folder) {
+  const urls = [];
+  for (const file of files) {
+    const ref = storage.ref(`${folder}/${Date.now()}-${file.name}`);
+    await ref.put(file);
+    urls.push(await ref.getDownloadURL());
   }
-});
+  return urls;
+}
 
-function renderCard(doc) {
-  const card = doc.data();
-  const div = document.createElement("div");
-  div.className = "bg-white p-4 rounded shadow";
-  div.innerHTML = `
-    <h3 class="font-bold text-lg">${card.name}</h3>
-    <p class="text-sm text-gray-600">Set: ${card.set || ""} | Condition: ${
-    card.condition || ""
+// Render card
+function renderCard(doc, type) {
+  const d = doc.data();
+  const el = document.createElement("div");
+  el.className = "bg-white p-4 rounded shadow";
+  el.innerHTML = `
+    <h3 class="font-bold text-lg">${d.name}</h3>
+    <p class="text-sm text-gray-600">Set: ${d.set || ""} | Condition: ${
+    d.condition || ""
   }</p>
-    <p class="text-sm">Price: $${card.price} | Purchase: $${
-    card.purchasePrice || 0
-  } | Status: ${card.status}</p>
-    <p class="text-sm">Purchased From: ${card.purchasedFrom || ""}</p>
-    <p class="text-sm">Notes: ${card.notes || ""}</p>
+    <p class="text-sm">Price: $${d.price} | Purchase: $${
+    d.purchasePrice || 0
+  } | Status: ${d.status}</p>
+    <p class="text-sm">Purchased From: ${d.purchasedFrom || ""}</p>
+    <p class="text-sm">Notes: ${d.notes || ""}</p>
     <div class="flex flex-wrap gap-2 mt-2">
-      ${(card.images || [])
+      ${(d.images || [])
         .map(
           (img) => `<img src="${img}" class="w-20 h-20 object-cover rounded" />`
         )
@@ -101,79 +75,129 @@ function renderCard(doc) {
     <div class="mt-4 flex gap-2">
       <button class="bg-yellow-500 text-white px-3 py-1 rounded" onclick="editCard('${
         doc.id
-      }')">Edit</button>
+      }', '${type}')">Edit</button>
       <button class="bg-red-600 text-white px-3 py-1 rounded" onclick="deleteCard('${
         doc.id
-      }')">Delete</button>
+      }', '${type}')">Delete</button>
     </div>
   `;
-  pokemonList.appendChild(div);
+  (type === "pokemon" ? pokemonList : bearbrickList).appendChild(el);
 }
 
+// Load cards
 async function loadCards() {
-  const snapshot = await db.collection("pokemon").get();
-  pokemonList.innerHTML = "";
   const query = searchInput.value.toLowerCase();
-  const statusFilter = filterStatus.value;
-
-  snapshot.forEach((doc) => {
-    const card = doc.data();
+  const filter = filterStatus.value;
+  const snap = await db.collection("pokemon").get();
+  pokemonList.innerHTML = "";
+  snap.forEach((doc) => {
+    const d = doc.data();
     if (
-      (!query || card.name.toLowerCase().includes(query)) &&
-      (!statusFilter || card.status === statusFilter)
+      (!query || d.name.toLowerCase().includes(query)) &&
+      (!filter || d.status === filter)
     ) {
-      renderCard(doc);
+      renderCard(doc, "pokemon");
     }
   });
 }
 
-async function editCard(id) {
-  const doc = await db.collection("pokemon").doc(id).get();
-  if (doc.exists) {
-    const card = doc.data();
-    pokemonForm.pokemonDocId.value = id;
-    pokemonForm.pokemonName.value = card.name;
-    pokemonForm.pokemonSet.value = card.set;
-    pokemonForm.pokemonCondition.value = card.condition;
-    pokemonForm.pokemonPrice.value = card.price;
-    pokemonForm.pokemonPurchasePrice.value = card.purchasePrice || "";
-    pokemonForm.pokemonPurchasedFrom.value = card.purchasedFrom || "";
-    pokemonForm.pokemonStatusField.value = card.status || "";
-    pokemonForm.pokemonStripeLink.value = card.stripeLink;
-    pokemonForm.pokemonNotes.value = card.notes || "";
+// Load bearbricks
+async function loadBearbricks() {
+  const snap = await db.collection("bearbricks").get();
+  bearbrickList.innerHTML = "";
+  snap.forEach((doc) => renderCard(doc, "bearbrick"));
+}
+
+// Edit card
+async function editCard(id, type) {
+  const doc = await db.collection(type).doc(id).get();
+  if (!doc.exists) return;
+  const d = doc.data();
+  const form = type === "pokemon" ? pokemonForm : bearbrickForm;
+  form[`${type}DocId`].value = id;
+  form[`${type}Name`].value = d.name;
+  form[`${type}Set`].value = d.set;
+  form[`${type}Condition`].value = d.condition;
+  form[`${type}Price`].value = d.price;
+  form[`${type}PurchasePrice`].value = d.purchasePrice || "";
+  form[`${type}PurchasedFrom`].value = d.purchasedFrom || "";
+  form[`${type}StatusField`].value = d.status || "";
+  form[`${type}StripeLink`].value = d.stripeLink || "";
+  form[`${type}Notes`].value = d.notes || "";
+}
+
+// Delete card
+async function deleteCard(id, type) {
+  if (confirm("Are you sure?")) {
+    await db.collection(type).doc(id).delete();
+    type === "pokemon" ? loadCards() : loadBearbricks();
   }
 }
 
-async function deleteCard(id) {
-  if (confirm("Are you sure you want to delete this card?")) {
-    await db.collection("pokemon").doc(id).delete();
-    loadCards();
-  }
-}
+// Submit Pokémon
+pokemonForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const id = pokemonForm.pokemonDocId.value;
+  const files = document.getElementById("pokemonImageUpload").files;
+  const images = await uploadImages(files, "pokemon");
+  const data = {
+    name: pokemonForm.pokemonName.value,
+    set: pokemonForm.pokemonSet.value,
+    condition: pokemonForm.pokemonCondition.value,
+    price: parseFloat(pokemonForm.pokemonPrice.value),
+    purchasePrice: parseFloat(pokemonForm.pokemonPurchasePrice.value) || null,
+    purchasedFrom: pokemonForm.pokemonPurchasedFrom.value,
+    status: pokemonForm.pokemonStatusField.value,
+    stripeLink: pokemonForm.pokemonStripeLink.value || "",
+    notes: pokemonForm.pokemonNotes.value || "",
+  };
+  if (images.length) data.images = images;
+  if (id) await db.collection("pokemon").doc(id).update(data);
+  else await db.collection("pokemon").add(data);
+  pokemonForm.reset();
+  pokemonForm.pokemonDocId.value = "";
+  loadCards();
+});
 
-searchInput.addEventListener("input", loadCards);
-filterStatus.addEventListener("change", loadCards);
+// Submit Bearbrick
+bearbrickForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const id = bearbrickForm.bearbrickDocId.value;
+  const files = document.getElementById("bearbrickImageUpload").files;
+  const images = await uploadImages(files, "bearbricks");
+  const data = {
+    name: bearbrickForm.bearbrickName.value,
+    set: bearbrickForm.bearbrickSet.value,
+    condition: bearbrickForm.bearbrickCondition.value,
+    price: parseFloat(bearbrickForm.bearbrickPrice.value),
+    purchasePrice:
+      parseFloat(bearbrickForm.bearbrickPurchasePrice.value) || null,
+    purchasedFrom: bearbrickForm.bearbrickPurchasedFrom.value,
+    status: bearbrickForm.bearbrickStatusField.value,
+    stripeLink: bearbrickForm.bearbrickStripeLink.value || "",
+    notes: bearbrickForm.bearbrickNotes.value || "",
+  };
+  if (images.length) data.images = images;
+  if (id) await db.collection("bearbricks").doc(id).update(data);
+  else await db.collection("bearbricks").add(data);
+  bearbrickForm.reset();
+  bearbrickForm.bearbrickDocId.value = "";
+  loadBearbricks();
+});
 
-// Tab switching
-const pokemonTab = document.getElementById("pokemonTab");
-const bearbrickTab = document.getElementById("bearbrickTab");
-const pokemonSection = document.getElementById("pokemonSection");
-const bearbrickSection = document.getElementById("bearbrickSection");
-
-pokemonTab.addEventListener("click", () => {
+// Tabs
+document.getElementById("pokemonTab").addEventListener("click", () => {
   pokemonSection.classList.remove("hidden");
   bearbrickSection.classList.add("hidden");
-  pokemonTab.classList.add("bg-blue-500", "text-white");
-  bearbrickTab.classList.remove("bg-blue-500", "text-white");
-  bearbrickTab.classList.add("bg-gray-300");
 });
-
-bearbrickTab.addEventListener("click", () => {
+document.getElementById("bearbrickTab").addEventListener("click", () => {
   pokemonSection.classList.add("hidden");
   bearbrickSection.classList.remove("hidden");
-  bearbrickTab.classList.add("bg-blue-500", "text-white");
-  pokemonTab.classList.remove("bg-blue-500", "text-white");
-  pokemonTab.classList.add("bg-gray-300");
+  loadBearbricks();
 });
+
+// Filters
+searchInput.addEventListener("input", loadCards);
+filterStatus.addEventListener("change", loadCards);
 
 loadCards();
