@@ -150,6 +150,7 @@ pokemonForm.addEventListener("submit", async (e) => {
     status: pokemonForm.pokemonStatusField.value,
     stripeLink: pokemonForm.pokemonStripeLink.value || "",
     notes: pokemonForm.pokemonNotes.value || "",
+    location: pokemonForm.pokemonLocation.value || "",
   };
   if (images.length) data.images = images;
   if (id) await db.collection("pokemon").doc(id).update(data);
@@ -176,6 +177,7 @@ bearbrickForm.addEventListener("submit", async (e) => {
     status: bearbrickForm.bearbrickStatusField.value,
     stripeLink: bearbrickForm.bearbrickStripeLink.value || "",
     notes: bearbrickForm.bearbrickNotes.value || "",
+    location: bearbrickForm.bearbrickLocation.value || "",
   };
   if (images.length) data.images = images;
   if (id) await db.collection("bearbricks").doc(id).update(data);
