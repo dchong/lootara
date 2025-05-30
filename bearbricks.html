@@ -254,6 +254,7 @@
 
       function fetchBears() {
         db.collection("bearbricks")
+          .where("status", "==", "Listed")
           .get()
           .then((snapshot) => {
             bearbricks = snapshot.docs.map((doc) => doc.data());
