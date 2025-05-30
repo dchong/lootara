@@ -6,6 +6,7 @@ fetch("header.html")
   .then((html) => {
     document.getElementById("header-placeholder").innerHTML = html;
   });
+
 fetch("footer.html")
   .then((res) => res.text())
   .then((html) => {
@@ -63,6 +64,7 @@ function renderCard(doc, type) {
     <p class="text-sm">Price: $${d.price} | Purchase: $${
     d.purchasePrice || 0
   } | Status: ${d.status}</p>
+    <p class="text-sm">Storage Bin: ${d.location || ""}</p>
     <p class="text-sm">Purchased From: ${d.purchasedFrom || ""}</p>
     <p class="text-sm">Notes: ${d.notes || ""}</p>
     <div class="flex flex-wrap gap-2 mt-2">
@@ -105,7 +107,7 @@ async function loadCards() {
 async function loadBearbricks() {
   const snap = await db.collection("bearbricks").get();
   bearbrickList.innerHTML = "";
-  snap.forEach((doc) => renderCard(doc, "bearbrick"));
+  snap.forEach((doc) => renderCard(doc, "bearbricks"));
 }
 
 // Edit card
@@ -113,17 +115,21 @@ async function editCard(id, type) {
   const doc = await db.collection(type).doc(id).get();
   if (!doc.exists) return;
   const d = doc.data();
+
+  const prefix = type === "pokemon" ? "pokemon" : "bearbrick"; // 🔧 Fix the mismatch
   const form = type === "pokemon" ? pokemonForm : bearbrickForm;
-  form[`${type}DocId`].value = id;
-  form[`${type}Name`].value = d.name;
-  form[`${type}Set`].value = d.set;
-  form[`${type}Condition`].value = d.condition;
-  form[`${type}Price`].value = d.price;
-  form[`${type}PurchasePrice`].value = d.purchasePrice || "";
-  form[`${type}PurchasedFrom`].value = d.purchasedFrom || "";
-  form[`${type}StatusField`].value = d.status || "";
-  form[`${type}StripeLink`].value = d.stripeLink || "";
-  form[`${type}Notes`].value = d.notes || "";
+
+  form[`${prefix}DocId`].value = id;
+  form[`${prefix}Name`].value = d.name;
+  form[`${prefix}Set`].value = d.set;
+  form[`${prefix}Condition`].value = d.condition;
+  form[`${prefix}Price`].value = d.price;
+  form[`${prefix}PurchasePrice`].value = d.purchasePrice || "";
+  form[`${prefix}PurchasedFrom`].value = d.purchasedFrom || "";
+  form[`${prefix}StatusField`].value = d.status || "";
+  form[`${prefix}StripeLink`].value = d.stripeLink || "";
+  form[`${prefix}Notes`].value = d.notes || "";
+  form[`${prefix}Location`].value = d.location || "";
 }
 
 // Delete card
@@ -192,6 +198,7 @@ document.getElementById("pokemonTab").addEventListener("click", () => {
   pokemonSection.classList.remove("hidden");
   bearbrickSection.classList.add("hidden");
 });
+
 document.getElementById("bearbrickTab").addEventListener("click", () => {
   pokemonSection.classList.add("hidden");
   bearbrickSection.classList.remove("hidden");
@@ -202,4 +209,5 @@ document.getElementById("bearbrickTab").addEventListener("click", () => {
 searchInput.addEventListener("input", loadCards);
 filterStatus.addEventListener("change", loadCards);
 
+// Initial Load
 loadCards();
